@@ -219,7 +219,7 @@ GitHub Release 给不想注册 HF 的人用。反正权重是同一份目录，�
 # 传完之后
 
 1. **回填链接**：把 HF 模型页 / Release 页的地址填进主仓 `README.md` 的「下载模型」小节
-   （该小节现在留的是 `<待填>` 占位符，把两行链接补上即可）。
+   （该小节现在留的是 `https://github.com/Aolibibi/spinlens/releases/tag/0.0.1-bigfisho7` 占位符，把两行链接补上即可）。
 2. **跑一遍自检**（确认新加的文档没带本机路径 / 密钥残留）：
    ```bash
    node tools/preflight.cjs
