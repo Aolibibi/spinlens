@@ -51,6 +51,19 @@ const step = (s) => log('  ' + s);
 function findPython() {
   const cands = [];
   if (PY_OVERRIDE) cands.push({ cmd: PY_OVERRIDE, args: [], label: 'HUASHU_PY' });
+
+  // python-path.txt（项目根目录，已在 .gitignore 里）：写一行 python.exe 的完整路径。
+  // 为什么需要它：setx 写的是注册表，而**已经运行的 explorer.exe 不会刷新环境变量** ——
+  // 从资源管理器双击 启动.cmd 时，子进程继承的是 explorer 的旧环境，HUASHU_PY 看不到。
+  // 文件不受这个问题影响，双击就能生效，也不用重新登录。
+  try {
+    const pf = path.join(ROOT, 'python-path.txt');
+    if (fs.existsSync(pf)) {
+      const line = fs.readFileSync(pf, 'utf8').split(/\r?\n/).map((s) => s.trim())
+        .find((s) => s && !s.startsWith('#'));
+      if (line) cands.push({ cmd: line, args: [], label: 'python-path.txt' });
+    }
+  } catch { /* 读不到就跳过 */ }
   const rels = [
     path.join(ROOT, 'python_embeded', 'python.exe'),
     path.join(ROOT, '..', 'python_embeded', 'python.exe'),
@@ -107,6 +120,23 @@ function shutdown(code, why) {
   closing = true;
   log('');
   log(`  正在收尾${why ? `（${why}）` : ''}…`);
+
+  // 点 X 关窗时 Windows 只给进程 ~5 秒，之后强杀。同步 taskkill 有可能来不及跑完
+  //（实测现象：只关了模型，网页服务变成孤儿留在后台）。
+  // 所以先把清理交给一个 detached 的助手进程 —— 它不随我们死，一定能把两棵进程树杀干净。
+  const pids = kids.map((k) => k.pid).filter(Boolean);
+  if (pids.length) {
+    try {
+      const args = pids.flatMap((p) => ['/PID', String(p)]);
+      // ping 当延时器：等我们退出之后再动手，避免和我们自己的 taskkill 抢
+      const helper = spawn('cmd', ['/c', 'ping', '-n', '2', '127.0.0.1', '>nul', '&', 'taskkill', ...args, '/T', '/F'], {
+        stdio: 'ignore', detached: true, windowsHide: true,
+      });
+      helper.unref();
+    } catch { /* 尽力而为 */ }
+  }
+
+  // 再同步杀一遍：正常路径下这一步就够了，助手进程是保底
   for (const k of kids) { try { killTree(k.pid, k.label); } catch { /* 尽力而为 */ } }
   log('  全部结束，本地模型占的显存应当已经释放。');
   if (code !== undefined) process.exit(code);

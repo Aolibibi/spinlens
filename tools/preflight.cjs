@@ -52,6 +52,9 @@ const SKIP_FILE_RES = [
   /^huashu-.*\.csv$/i, /\.low\.csv$/i,
   /^(Thumbs\.db|desktop\.ini|\.DS_Store)$/i,
   /^_.*\.(mjs|cjs|json)$/i,
+  // 本机专用配置（已被 .gitignore 排除，永远不会被 clone 到）：里面按设计就要写本机
+  // Python 路径，所以在这里必须豁免，否则 preflight 会把它当成泄漏误报。
+  /^python-path\.txt$/i,
 ];
 const SKIP_REL = new Set([
   'tools/agreement.cjs',

@@ -53,3 +53,6 @@ desktop.ini
 _*.mjs
 _*.cjs
 _*.json
+
+# 本机 Python 路径（各人环境不同，不进发布包）
+python-path.txt

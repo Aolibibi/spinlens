@@ -5,12 +5,13 @@ rem  Double-click this file: it opens a console window, starts the web service
 rem  (plus the optional local model service, if Python + weights are present),
 rem  then opens the browser.
 rem  Close this console window (X or Ctrl+C) = both services stop, VRAM freed.
-rem  This file is intentionally ASCII-only, except the window title below: all other
-rem  Chinese output is printed by launch.cjs (with chcp 65001), so no codepage mojibake.
-rem  The title line must stay AFTER chcp 65001, otherwise cmd would garble it.
+rem
+rem  NOTE: this file must stay ASCII-only with CRLF line endings.
+rem  A UTF-8 or LF-only .cmd makes cmd.exe mis-parse and the window flashes shut
+rem  before the final pause. The Chinese window title is set by launch.cjs
+rem  (process.title) instead, which is encoding-safe.
 rem ===========================================================================
 chcp 65001 >nul
-title spinlens · 话术照妖镜
 cd /d "%~dp0"
 
 where node >nul 2>nul
