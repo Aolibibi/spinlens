@@ -1,0 +1,27 @@
+{
+  "name": "spinlens",
+  "version": "1.0.0",
+  "description": "话术照妖镜（spinlens）：把一个 B 站视频的评论区过一遍，标出有多少条评论在使用话术、分别是哪几类、原文是哪条。零第三方依赖，clone 下来 node server.js 就能跑。",
+  "keywords": ["bilibili", "comment", "rhetoric", "transparency", "spin", "doublespeak", "chinese-nlp"],
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/Aolibibi/spinlens.git" },
+  "homepage": "https://github.com/Aolibibi/spinlens",
+  "bugs": { "url": "https://github.com/Aolibibi/spinlens/issues" },
+  "private": true,
+  "type": "commonjs",
+  "engines": { "node": ">=20.19" },
+  "dependencies": {},
+  "devDependencies": {},
+  "main": "huashu.js",
+  "bin": { "spinlens": "huashu.js" },
+  "scripts": {
+    "start": "node server.js",
+    "demo": "node huashu.js --demo",
+    "selftest": "node huashu.js --selftest",
+    "eval": "node tests/eval.js",
+    "serve": "node server.js --open",
+    "regress": "node tools/regress.cjs",
+    "preflight": "node tools/preflight.cjs",
+    "release": "node tools/package-release.mjs"
+  }
+}

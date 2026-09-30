@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>话术照妖镜 · spinlens</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
+    --fg: #e6e9ef; --dim: #9aa3b2; --accent: #4f8cff; --warn: #f0b429; --bad: #ef4444; --ok: #22c55e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.65 "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
+  h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: .5px; }
+  .sub { color: var(--dim); font-size: 13px; margin-bottom: 22px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  input[type=text], input[type=number], input[type=password], select {
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
+    color: var(--fg); padding: 10px 12px; font-size: 14px; outline: none; font-family: inherit;
+  }
+  input[type=text]:focus, input[type=number]:focus, input[type=password]:focus { border-color: var(--accent); }
+  #input { flex: 1 1 420px; min-width: 240px; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 10px 18px; font-size: 14px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--fg); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  details summary { cursor: pointer; color: var(--dim); font-size: 13px; margin-top: 12px; user-select: none; }
+  details .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 12px; }
+  label.f { display: block; font-size: 12px; color: var(--dim); margin-bottom: 5px; }
+  .types { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .types label { font-size: 13px; background: var(--panel2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+  .types input { margin-right: 5px; }
+  #status { color: var(--dim); font-size: 13px; min-height: 20px; margin-top: 12px; }
+  .err { color: #fecaca; background: #3b1517; border: 1px solid #7f1d1d; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; white-space: pre-wrap; }
+  .stat { display: flex; gap: 22px; flex-wrap: wrap; font-size: 13px; color: var(--dim); }
+  .stat b { color: var(--fg); font-size: 17px; font-weight: 600; }
+  .vt { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+  .bars { margin-top: 14px; display: grid; gap: 6px; }
+  .bar { display: grid; grid-template-columns: 150px 1fr 50px; align-items: center; gap: 10px; font-size: 13px; }
+  .bar .track { background: var(--panel2); border-radius: 4px; height: 14px; overflow: hidden; }
+  .bar .fill { height: 100%; border-radius: 4px; }
+  .hit { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 10px; background: var(--panel); }
+  .hit-top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; font-size: 12px; color: var(--dim); }
+  .badge { font-size: 12px; padding: 2px 9px; border-radius: 999px; color: #fff; font-weight: 600; }
+  .msg { font-size: 14.5px; white-space: pre-wrap; word-break: break-word; }
+  mark { background: #ffd75e; color: #1a1a1a; border-radius: 3px; padding: 0 2px; }
+  .evidence { margin-top: 9px; font-size: 12px; color: var(--dim); font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
+  a { color: var(--accent); }
+  .foot { color: var(--dim); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 14px; margin-top: 26px; }
+  .disc { color: var(--warn); font-size: 13px; margin-top: 10px; }
+  .hidden { display: none; }
+  .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: sp .8s linear infinite; vertical-align: -1px; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  /* 引擎切换 */
+  .engines { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .engine { flex: 1 1 260px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; cursor: pointer; background: var(--panel2); }
+  .engine.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .engine .t { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 7px; }
+  .engine .d { color: var(--dim); font-size: 12.5px; margin-top: 4px; }
+  .pill { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--line); color: var(--dim); }
+  .pill.rec { background: #14351f; color: #7ee2a8; }
+  /* 进度条 */
+  .prog { margin-top: 12px; }
+  .prog .track { height: 8px; background: var(--panel2); border-radius: 999px; overflow: hidden; }
+  .prog .fill { height: 100%; width: 0; background: linear-gradient(90deg,#4f8cff,#22c55e); transition: width .3s; }
+  .prog .txt { font-size: 12.5px; color: var(--dim); margin-top: 6px; }
+  /* 结果区筛选控件 */
+  .chip { background: var(--panel2); border: 1px solid var(--line); color: var(--fg); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit; }
+  .chip.on { border-color: var(--accent); color: #fff; background: #1d2b45; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>话术照妖镜 · 评论区话术扫描</h1>
+  <div class="sub">粘贴一个 B 站视频链接或 BV 号，扫描评论区里有多少条评论在使用话术、分别是哪几类、原文是哪条。<b>它是筛子，不是判决。</b></div>
+
+  <div class="card">
+    <div class="engines">
+      <div class="engine on" id="engLocal" data-engine="local">
+        <div class="t">🎯 本地微调模型 <span class="pill rec">推荐</span></div>
+        <div class="d">我们自己微调的 Erlangshen-110M（8 类多标签、约 44ms/条、完全离线）。<b>教科书样本 8/8 全中、区分度 70–500 倍</b>；但真实评论上人工验收只有 <b>P=29.4% R=55.6%</b>（验收集仅 8 条正例，噪声大）——<b>当粗筛用，必须人工复核</b>。<br>⚠ 需先启动本地模型服务：<code>lab/train/serve-erlangshen.py</code>（127.0.0.1:8790）
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:12.5px">判定阈值</span>
+            <input id="localTh" type="range" min="0.30" max="0.95" step="0.05" value="0.60" style="flex:1">
+            <b id="localThVal" style="font-size:12.5px;min-width:32px">0.60</b>
+          </div>
+        </div>
+      </div>
+      <div class="engine" id="engModel" data-engine="model">
+        <div class="t">🤖 外部模型引擎</div>
+        <div class="d">
+          支持两种接法，<b>两者的显示方式完全不同</b>：
+          <div style="margin:8px 0;display:flex;gap:16px;flex-wrap:wrap">
+            <label style="cursor:pointer"><input type="radio" name="modelMode" value="llm" checked> <b>LLM 模式</b>——用你自己的大模型</label>
+            <label style="cursor:pointer"><input type="radio" name="modelMode" value="decision"> <b>决策模型模式</b>——typed 决策模型（Jev 类）</label>
+          </div>
+          <div id="noteLlm">把九类规则写成提示词发给你的 LLM，让它逐条判断「作者本人是否正在做某一类动作」。<b>显示形式：每个命中旁边标出 LLM 的文字理由 + 它从原文抄回来的证据原话，正文里把那句原话高亮；<u>不出概率条</u></b>；抄不回原文的一律丢弃。<b>不做流式传输，但有进度条。</b></div>
+          <div id="noteDec" hidden>把每条评论当一个 <b>state</b>、8 个类型当 8 道 <b>noul（是非题）</b>塞进<b>同一个请求</b>（官方 fan-out），读回每道的 <b>P(是) 校准概率</b>（<code>answers.&lt;类型id&gt;.noul</code>）。<b>官方无 batch 端点，所以请求数 = 评论数</b>（而不是评论数 × 8）。<b>显示形式：8 类概率条</b>（与本地微调模型一致），阈值滑块可调。接口填在下面的「决策模型 API 地址」里（<b>不是</b>通用 LLM 接口）。⚠ 官方明确说<b>中文准确率不背书</b>，且<b>不同决策模型的阈值与准确度都不一样，需要你自己微调阈值</b>——同一套阈值换模型就会失效。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <input id="input" type="text" placeholder="例如：BV1pWaY6mEcM  或  https://www.bilibili.com/video/BV1pWaY6mEcM/">
+      <button id="run">开始扫描</button>
+      <button id="demo" class="ghost">跑示例</button>
+    </div>
+
+    <!-- 模型引擎的配置 -->
+    <div id="modelBox" class="hidden" style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
+      <div class="row" id="llmRowA" style="align-items:flex-end">
+        <div style="flex:0 0 190px">
+          <label class="f">接口类型</label>
+          <select id="aiKind" style="width:100%">
+            <option value="openai">OpenAI 兼容 API（推荐）</option>
+            <option value="ollama">本地 Ollama（给下游使用者保留，本项目未测试）</option>
+          </select>
+        </div>
+        <div style="flex:1 1 300px">
+          <label class="f">接口地址（baseUrl）</label>
+          <input id="aiBase" type="text" style="width:100%" value="https://api.deepseek.com/v1">
+        </div>
+        <div style="flex:1 1 180px">
+          <label class="f">模型名</label>
+          <input id="aiModel" type="text" style="width:100%" placeholder="例如 deepseek-chat">
+        </div>
+        <div style="flex:1 1 200px">
+          <label class="f">API Key（Ollama 留空）</label>
+          <input id="aiKey" type="password" style="width:100%" placeholder="sk-...">
+        </div>
+      </div>
+      <div class="row" id="llmRowB" style="margin-top:12px;align-items:flex-end">
+        <div style="flex:0 0 150px">
+          <label class="f">每批评论数</label>
+          <input id="aiBatch" type="number" value="20" min="1" max="200" style="width:100%">
+        </div>
+        <div style="flex:0 0 210px" id="llmStyleBox">
+          <label class="f">LLM 判定方式</label>
+          <select id="aiStyle" style="width:100%">
+            <option value="direct">直接判定九类（默认）</option>
+            <option value="two">两级判定（先家族后证据，旧路径）</option>
+          </select>
+        </div>
+        <div style="flex:0 0 140px" id="aiPassesBox">
+          <label class="f">跑几遍取共识</label>
+          <input id="aiPasses" type="number" value="2" min="1" max="5" style="width:100%">
+        </div>
+        <div style="flex:1 1 300px;color:var(--dim);font-size:12.5px" id="costHint">
+          LLM 直接判定：一次把九类规则 + 一批评论发过去，要它返回「类型 + 逐字证据 + 理由」。100 条评论、每批 20 ≈ 5 次请求。
+        </div>
+      </div>
+
+      <!-- 决策模型模式专用配置（选「决策模型模式」时才显示） -->
+      <div id="decisionBox" class="hidden">
+        <div class="row" style="margin-top:12px;align-items:flex-end">
+          <div style="flex:1 1 300px">
+            <label class="f">决策模型 API 地址（baseUrl）</label>
+            <input id="decUrl" type="text" style="width:100%" placeholder="留空默认 https://api.typesafe.ai（官方 Jev）；自建网关填自己的地址">
+          </div>
+          <div style="flex:1 1 180px">
+            <label class="f">模型名（可留空）</label>
+            <input id="decModel" type="text" style="width:100%" placeholder="留空默认 jev-latest">
+          </div>
+          <div style="flex:1 1 180px">
+            <label class="f">API Key（可留空）</label>
+            <input id="decKey" type="password" style="width:100%" placeholder="官方 key 从 console.typesafe.ai/keys 取">
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px;align-items:flex-end">
+          <div style="flex:0 0 150px">
+            <label class="f">请求路径</label>
+            <input id="decPath" type="text" style="width:100%" value="/v1/systemone">
+          </div>
+          <div style="flex:0 0 130px">
+            <label class="f">每批评论数</label>
+            <input id="decBatch" type="number" value="8" min="1" max="64" style="width:100%">
+          </div>
+          <div style="flex:0 0 190px">
+            <label class="f">概率字段（可选）</label>
+            <input id="decProbPath" type="text" style="width:100%" placeholder="result.calibrated.true">
+          </div>
+          <div style="flex:1 1 260px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:12.5px;white-space:nowrap">判定阈值</span>
+            <input id="decTh" type="range" min="0.30" max="0.95" step="0.05" value="0.60" style="flex:1">
+            <b id="decThVal" style="font-size:12.5px;min-width:32px">0.60</b>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <label style="font-size:13px;color:var(--fg)"><input id="decOnly8" type="checkbox" checked> 只判本地模型已知的 8 类（跳过 T8 胜利后劝和；本地微调版没有 T8 正例）</label>
+        </div>
+        <div class="disc">⚠ 这里填的是 <b>Jev / TypeSafe System One</b> 这类决策模型 API（不是本地 8790 那个分类服务，也不是通用 LLM 的 /chat/completions）：一次请求 = 一个 <b>state</b> + 多道 <b>noul 是非题</b>，读回 <code>answers.&lt;类型id&gt;.noul</code>（0~1 的 <b>P(是) 校准概率</b>）——<b>不读 top_probability</b>（那是「获胜选项」的概率，不是 P(true)，拿它当 P(true) 会把每一类都判成命中）。官方<b>没有 batch 端点</b>，所以请求数 = 评论数（8 类已合并在同一次请求里）。⚠ 官方明确说 <b>CJK 等非英语语种「能收但不等同、先自测」</b>，<b>不同决策模型的阈值与准确度也都不一样，请自己微调阈值。</b></div>
+      </div>
+
+      <div class="disc" id="modelDisc">⚠ LLM 模式下规则匹配完全不起作用，判定口径改由提示词约束；命中必须能把证据逐字抄回原文，抄不回的一律丢弃。不同模型的结果会有差异，请把它当成「另一个标注员」，仍要人工复核。</div>
+    </div>
+
+    <details>
+      <summary>高级设置</summary>
+      <div class="grid">
+        <div>
+          <label class="f">最多抓多少条主评论</label>
+          <input id="maxComments" type="number" value="2000" min="30" style="width:100%">
+        </div>
+        <div>
+          <label class="f">命中阈值（仅规则引擎）</label>
+          <input id="minScore" type="number" value="0.6" step="0.05" min="0.1" max="1" style="width:100%">
+        </div>
+        <div>
+          <label class="f">每页间隔（毫秒，别太小）</label>
+          <input id="delay" type="number" value="120" min="0" style="width:100%">
+        </div>
+        <div>
+          <label class="f">Cookie（可选，撞风控时才需要）</label>
+          <input id="cookie" type="text" placeholder="SESSDATA=..." style="width:100%">
+        </div>
+        <div>
+          <label class="f">风控降级</label>
+          <label style="font-size:13px;color:var(--fg)"><input id="allowPartial" type="checkbox"> 只拿到 3 条时也出报告</label>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <label class="f">只跑指定类型（不勾＝全跑）</label>
+        <div class="types" id="typeBox"></div>
+      </div>
+    </details>
+
+    <div id="status"></div>
+    <div id="prog" class="prog hidden">
+      <div class="track"><div class="fill" id="progFill"></div></div>
+      <div class="txt" id="progTxt"></div>
+    </div>
+  </div>
+
+  <div id="error" class="err hidden"></div>
+  <div id="result"></div>
+
+  <div class="card" id="decl">
+    <div class="vt">声明</div>
+    <div style="font-size:13.5px;color:var(--warn)">本项目目前<b>只支持 B 站</b>（bilibili.com）。模型输出结果<b>不一定准确</b>，仅供参考，请自行人工复核。</div>
+    <details>
+      <summary>配置需求说明（跑起来需要什么）</summary>
+      <div style="font-size:13px;color:var(--fg);line-height:1.9;margin-top:8px">
+        <b>1）通用</b><br>
+        · Node.js ≥ 20.19（实测 v24）；<b>零 npm 依赖</b>，只用 Node 标准库。<br>
+        · 启动：双击根目录 <code>启动.cmd</code>（开一个黑窗口，自动拉起本机服务并打开浏览器）；或手动 <code>node server.js --port 8787</code>。<br>
+        · 浏览器打开 <code>http://127.0.0.1:8787</code>；服务只监听本机 127.0.0.1。<br>
+        <b>2）local 引擎（本地微调模型）· 可选</b><br>
+        · Python 环境：需要 <b>Python 3.10+</b>，且装了 <code>torch</code> + <code>transformers</code>。<br>
+        · 路径怎么给：设环境变量 <code>HUASHU_PY</code> 指向你的 python 可执行文件；或把 <code>python_embeded/</code> 放在项目同级目录，启动器会自动探测。<b>没装 Python 不影响另外两种引擎。</b><br>
+        · 模型权重：默认找 <code>lab/train/runs/all20/best</code>（Erlangshen-110M，8 类多标签）。<b>权重不随本仓库发布</b>，需自己训练或把 <code>HUASHU_MODEL</code> 指到你自己的权重目录。<br>
+        · 推理服务：<code>python lab\train\serve-erlangshen.py --port 8790 --model lab\train\runs\all20\best --chunk 64</code>。<br>
+        · 显存：约 <b>1GB</b>（实测稳态 <b>658MiB</b>）；必须设 <code>PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True</code>（不设会因显存碎片从 40ms 退化到 87 秒）。<br>
+        <b>3）LLM 模式（外部大模型）</b><br>
+        · 需要任意 <b>OpenAI 兼容</b>接口：baseUrl + apiKey + 模型名（例如 <code>deepseek-chat</code>），走 <code>POST {baseUrl}/chat/completions</code>。<br>
+        · 不占本地显存；评论会发到你自己填的那个接口，注意隐私与 token 费用。<br>
+        <b>4）决策模型模式（Jev / TypeSafe System One）</b><br>
+        · 默认打官方端点 <code>POST https://api.typesafe.ai/v1/systemone</code>（Bearer key，从 <code>console.typesafe.ai/keys</code> 自助取）；地址/路径留空就用这个默认值。<br>
+        · 一次请求带一个 state + 8 道 <code>type:"noul"</code> 的是非题，读 <code>answers.&lt;类型id&gt;.noul</code>（0~1 的 P(true)）；<b>不读</b> top_probability。字段名不同时在「概率字段」里手工指定。<br>
+        · ⚠ 官方说明：<b>CJK 等非英语语种「能收但不等同」，要求自己先测</b>；不同模型的阈值也不同，请自己微调。<br>
+        · 该模式的调研文档未随本仓库发布；无 batch 端点 → 请求数 ≈ 评论数。
+      </div>
+    </details>
+  </div>
+
+  <div class="foot">
+    本工具只输出「哪条评论命中了哪条规则」，不回答「谁在使坏」；请勿用它生成针对具体个人的挂人名单。<br>
+    评论来自 B 站公开接口，不登录、零 Cookie；服务只监听本机 127.0.0.1，不上传任何数据。LLM / 决策模型模式下评论会发给你自己填的那个接口。<br>
+    <b>誓死捍卫大肥鱼 o7</b>
+  </div>
+</div>
+
+<script>
+const TYPE_COLORS = { T1:'#6366f1', T2:'#0ea5e9', T3:'#14b8a6', T4:'#22c55e', T5:'#f97316', T6:'#ec4899', T7:'#a855f7', T8:'#eab308', T9:'#ef4444', T10:'#78716c' };
+const TYPE_NAMES = { T1:'和稀泥型', T2:'假中立型', T3:'消解·梗', T4:'消解·轻描淡写', T5:'扣帽·软色情', T6:'扣帽·性别', T7:'信息茧房型', T8:'胜利后劝和', T9:'反饭圈型', T10:'污名化标签' };
+const FAMILY_COLORS = { 劝和:'#6366f1', 消解:'#14b8a6', 扣帽:'#f97316', 元框架:'#a855f7' };
+const $ = (id) => document.getElementById(id);
+let engine = 'local';   // 页面上第一张卡片（本地微调模型）默认是选中的，JS 变量必须跟上，否则不点卡片直接跑会掉回 rules
+
+// 类型勾选框
+(function initTypes(){
+  const box = $('typeBox');
+  Object.keys(TYPE_NAMES).forEach((id) => {
+    if (id === 'T10') return;
+    const l = document.createElement('label');
+    l.innerHTML = `<input type="checkbox" value="${id}"> ${id} ${TYPE_NAMES[id]}`;
+    box.appendChild(l);
+  });
+})();
+
+// 引擎切换 + 模型子模式切换（llm / decision 两种模式的说明文字、配置块、显示方式都不同）
+function currentModelMode() {
+  const el = document.querySelector('input[name=modelMode]:checked');
+  return el ? el.value : 'llm';
+}
+function syncEngineUi() {
+  const isModel = engine === 'model';
+  const isLlm = currentModelMode() !== 'decision';
+  // LLM 专属输入口：选「决策模型模式」时必须藏起来，否则两套配置同时铺开容易填错
+  for (const id of ['llmRowA', 'llmRowB']) {
+    const el = $(id);
+    if (el) el.classList.toggle('hidden', !isModel || !isLlm);
+  }
+  $('modelBox').classList.toggle('hidden', !isModel);
+  $('noteLlm').hidden = !isLlm;
+  $('noteDec').hidden = isLlm;
+  $('decisionBox').classList.toggle('hidden', !isModel || isLlm);
+  $('llmStyleBox').classList.toggle('hidden', !isLlm);
+  const twoPass = $('aiStyle').value === 'two';
+  $('aiPassesBox').classList.toggle('hidden', !isLlm || !twoPass);
+  $('costHint').textContent = isLlm
+    ? (twoPass
+      ? '两级判定：先粗筛家族，再只对命中的要逐字证据；跑 N 遍取共识（请求数 ≈ 遍数 × 2 × 批数）。'
+      : 'LLM 直接判定：一次把九类规则 + 一批评论发过去，要它返回「类型 + 逐字证据 + 理由」。100 条评论、每批 20 ≈ 5 次请求。')
+    : '决策模型（Jev）：1 条评论 1 次请求，8 个类型作为 8 道是非题塞进同一个请求，读回 answers.<类型id>.noul。请求数 ≈ 评论数（官方无 batch 端点）。';
+}
+document.querySelectorAll('.engine').forEach((el) => {
+  el.onclick = () => {
+    engine = el.dataset.engine;
+    document.querySelectorAll('.engine').forEach((x) => x.classList.toggle('on', x === el));
+    syncEngineUi();
+  };
+});
+document.querySelectorAll('input[name=modelMode]').forEach((el) => { el.onchange = syncEngineUi; });
+$('aiStyle').onchange = syncEngineUi;
+$('localTh').oninput = () => { $('localThVal').textContent = Number($('localTh').value).toFixed(2); };
+$('decTh').oninput = () => { $('decThVal').textContent = Number($('decTh').value).toFixed(2); };
+syncEngineUi();
+$('aiKind').onchange = () => {
+  const isOllama = $('aiKind').value === 'ollama';
+  $('aiBase').value = isOllama ? 'http://127.0.0.1:11434/v1' : 'https://api.deepseek.com/v1';
+  $('aiModel').placeholder = isOllama ? '例如 qwen2.5:7b' : '例如 deepseek-chat';
+  $('aiKey').placeholder = isOllama ? 'Ollama 不需要' : 'sk-...';
+};
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function highlight(msg, hits) {
+  const spans = [];
+  for (const t of hits) for (const e of (t.evidence || [])) if (e.span) spans.push(e.span);
+  if (!spans.length) return escapeHtml(msg);
+  spans.sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  for (const [s, e] of spans) {
+    const last = merged[merged.length - 1];
+    if (last && s <= last[1]) last[1] = Math.max(last[1], e); else merged.push([s, e]);
+  }
+  let out = '', cur = 0;
+  for (const [s, e] of merged) {
+    if (s > cur) out += escapeHtml(msg.slice(cur, s));
+    out += '<mark>' + escapeHtml(msg.slice(s, e)) + '</mark>';
+    cur = e;
+  }
+  return out + escapeHtml(msg.slice(cur));
+}
+
+const setStatus = (h) => { $('status').innerHTML = h; };
+const showError = (m) => { const e = $('error'); e.textContent = m; e.classList.remove('hidden'); };
+const clearError = () => { $('error').classList.add('hidden'); $('error').textContent = ''; };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function runAnalyze(body) {
+  $('run').disabled = true; $('demo').disabled = true;
+  clearError(); $('result').innerHTML = '';
+  $('prog').classList.remove('hidden');
+  $('progFill').style.width = '0%';
+  $('progTxt').textContent = '正在提交…';
+  setStatus('<span class="spin"></span> 任务已提交');
+
+  try {
+    const submit = await (await fetch('/api/analyze', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })).json();
+    if (!submit.ok || !submit.jobId) { showError('提交失败：' + (submit.error || '未知错误')); return; }
+
+    // 轮询进度
+    let done = null;
+    for (let i = 0; i < 7200; i++) {
+      const j = await (await fetch('/api/job/' + submit.jobId)).json();
+      if (!j.ok) { showError(j.error || '任务查询失败'); return; }
+      const p = j.progress || {};
+      if (j.status === 'running') {
+        const pct = p.total ? Math.round(p.done / p.total * 100) : (p.phase === '抓取评论' ? 5 : 0);
+        $('progFill').style.width = pct + '%';
+        $('progTxt').textContent = `${p.phase || '处理中'}${p.total ? ` ${p.done}/${p.total}` : (p.done ? ` ${p.done} 条` : '')}${p.message ? ` — ${p.message}` : ''}`;
+        await sleep(400);
+        continue;
+      }
+      if (j.status === 'error') { showError(`分析失败：${j.error}${j.detail ? '\n' + j.detail : ''}`); $('prog').classList.add('hidden'); return; }
+      done = j.result;
+      break;
+    }
+    if (!done) { showError('任务超时（等了太久）'); return; }
+    $('progFill').style.width = '100%';
+    $('progTxt').textContent = '完成';
+    setStatus(`完成，命中 ${done.hitCount} 条。`);
+    render(done);
+  } catch (e) {
+    showError('请求出错：' + e.message);
+  } finally {
+    $('run').disabled = false; $('demo').disabled = false;
+    setTimeout(() => $('prog').classList.add('hidden'), 2500);
+  }
+}
+
+/* ---------------- 结果区：筛选 / 排序（纯前端，不重新请求后端） ---------------- */
+const view = { types: new Set(), sort: 'like_desc' };
+let lastResult = null;
+
+const hitTypeIds = (h) => (h.types || []).map((t) => t.id);
+
+function visibleHits(d) {
+  const list = (d.hits || []).filter((h) => !view.types.size || hitTypeIds(h).some((id) => view.types.has(id)));
+  const cmp = {
+    like_desc: (a, b) => (b.like || 0) - (a.like || 0),
+    like_asc: (a, b) => (a.like || 0) - (b.like || 0),
+    time_desc: (a, b) => (b.ctime || 0) - (a.ctime || 0),
+    time_asc: (a, b) => (a.ctime || 0) - (b.ctime || 0),
+  }[view.sort] || ((a, b) => (b.like || 0) - (a.like || 0));
+  return list.slice().sort(cmp);
+}
+
+/** 单条命中卡片。三种显示方式严格分开（这是老板要的「两种模式显示方式不同」）：
+ *   local / decision → 8 类概率条 + 阈值高亮
+ *   llm              → 类型徽章 + LLM 文字理由 + 逐字证据原话（正文高亮），不出概率条
+ *   two（旧的两级判定）→ 家族徽章 + 逐字证据
+ */
+function hitCard(h, d) {
+  const isLlm = d.engine === 'model' && d.mode === 'llm';
+  const isDecision = d.engine === 'model' && d.mode === 'decision';
+  const showProbs = d.engine === 'local' || isDecision;
+  let badges = '', ev = '', hlSpans = [];
+
+  if (isLlm) {
+    badges = (h.types || []).map((t) => `<span class="badge" style="background:${TYPE_COLORS[t.id] || '#666'}">${t.id} ${escapeHtml(t.name)}</span>`).join(' ');
+    ev = (h.types || []).map((t) => {
+      const quotes = (t.evidence || []).map((e) => `<mark>${escapeHtml(e.text || '')}</mark>`).join(' ');
+      const why = t.reason ? `<span style="color:var(--fg)">LLM 理由：${escapeHtml(t.reason)}</span>` : '<span style="color:var(--dim)">（LLM 未给理由）</span>';
+      return `<div style="margin-bottom:4px">${why}<br>证据原话：${quotes || '（无）'}</div>`;
+    }).join('');
+    hlSpans = (h.spans || []).map((s) => ({ evidence: [{ span: s.span }] }));
+  } else if (showProbs) {
+    badges = (h.types || []).map((t) => `<span class="badge" style="background:${TYPE_COLORS[t.id] || '#666'}">${t.id} ${escapeHtml(t.name)}${t.score == null ? '' : ' ' + t.score}</span>`).join(' ');
+    ev = Object.entries(h.probs ?? {}).sort((a, b) => b[1] - a[1])
+      .map(([t, v]) => `<span style="display:inline-block;min-width:62px;${v >= (d.threshold ?? 0.6) ? 'color:#f97316;font-weight:700' : 'color:var(--dim)'}">${t} ${Number(v).toFixed(2)}</span>`).join('');
+    hlSpans = h.types || [];
+  } else {
+    badges = (h.families ?? []).map((f) => `<span class="badge" style="background:${FAMILY_COLORS[f.name] || '#666'}">${escapeHtml(f.name)}</span>`).join(' ')
+      + (h.types ?? []).filter((t) => t.ref).map((t) => `<span class="pill" style="margin-left:4px">参考 ${t.id} ${escapeHtml(t.name)}</span>`).join(' ');
+    ev = (h.spans ?? []).map((s) => `证据原话「${escapeHtml(s.quote)}」${s.reason ? '　' + escapeHtml(s.reason) : ''}`).join('<br>');
+    hlSpans = (h.spans ?? []).map((s) => ({ evidence: [{ span: s.span }] }));
+  }
+
+  const link = h.jumpUrl ? `<a href="${escapeHtml(h.jumpUrl)}" target="_blank" rel="noopener">去 B 站看这条评论 ↗</a>` : '';
+  const time = h.ctime ? new Date(h.ctime * 1000).toLocaleString('zh-CN') : '';
+  return `<div class="hit">
+      <div class="hit-top">${badges}<span>赞 ${h.like}</span><span>${escapeHtml(h.user || '匿名')}</span><span>${time}</span>${link}</div>
+      <div class="msg">${highlight(h.msg, hlSpans)}</div>
+      <div class="evidence">${ev}</div>
+    </div>`;
+}
+
+function renderHits() {
+  const d = lastResult;
+  const box = $('hits');
+  if (!d || !box) return;
+  const list = visibleHits(d);
+  box.innerHTML = list.map((h) => hitCard(h, d)).join('')
+    || '<div class="card" style="color:var(--dim)">当前筛选下没有命中——换个类型，或点「全部」。没有话术也是合法结果。</div>';
+  const line = $('hitCountLine');
+  if (line) line.textContent = `当前显示 ${list.length} / 共 ${(d.hits || []).length} 条`;
+}
+
+function render(d) {
+  lastResult = d;   // 筛选/排序要重渲染，得把原始结果留在手边
+  const m = d.meta, t = d.target;
+  const counts = {};
+  for (const h of d.hits) for (const ty of h.types) counts[ty.id] = (counts[ty.id] || 0) + 1;
+  const maxN = Math.max(1, ...Object.values(counts));
+
+  const bars = d.types.map((ty) => {
+    const n = counts[ty.id] || 0;
+    return `<div class="bar">
+      <div style="color:${n ? 'var(--fg)' : 'var(--dim)'}">${ty.id} ${ty.name}</div>
+      <div class="track"><div class="fill" style="width:${(n / maxN * 100).toFixed(1)}%;background:${TYPE_COLORS[ty.id] || '#666'}"></div></div>
+      <div style="text-align:right;color:${n ? 'var(--fg)' : 'var(--dim)'}">${n} 条</div>
+    </div>`;
+  }).join('');
+
+  // —— 筛选控件：类型 chip（带命中数，可多选） + 排序（纯前端 filter+sort）——
+  view.types.clear();
+  const chips = [`<button class="chip on" data-type="">全部 ${d.hits.length}</button>`]
+    .concat(d.types.map((ty) => `<button class="chip" data-type="${ty.id}">${ty.id} ${escapeHtml(ty.name)} ${counts[ty.id] || 0}</button>`))
+    .join('');
+  const modeHint = d.engine === 'model'
+    ? `本模式显示方式：${d.mode === 'decision' ? '【决策模型】8 类概率条（阈值滑块可调）' : d.mode === 'llm' ? '【LLM】类型徽章 + LLM 文字理由 + 逐字证据原话（不出概率条）' : '【两级判定】家族徽章 + 逐字证据'}　—— 与另一种模式不同`
+    : '';
+
+  $('result').innerHTML = `
+    <div class="card">
+      <div class="vt">${escapeHtml(t.title || '(未知标题)')}</div>
+      <div class="stat">
+        <div>主评论 <b>${m.mainCount}</b> 条</div>
+        <div>总评论 <b>${m.allCount}</b> 条（含楼中楼 ${m.rcountSum}）</div>
+        <div>命中 <b>${d.hitCount}</b> 条 (${(d.hitCount / Math.max(1, m.mainCount) * 100).toFixed(1)}%)</div>
+        <div>耗时 <b>${(m.elapsedMs / 1000).toFixed(1)}</b> s</div>
+        <div>错误 <b>${m.errorCount}</b></div>
+      </div>
+      <div class="stat" style="margin-top:8px">
+        <div>引擎 <b>${escapeHtml(d.engineLabel || '')}</b></div>
+        ${m.truncated ? '<div style="color:var(--warn)">⚠ 达到抓取上限，结果不完整</div>' : ''}
+        ${m.degraded ? '<div style="color:var(--bad)">⚠ 疑似风控降级，结果不可用</div>' : ''}
+        ${d.unjudged ? `<div style="color:var(--warn)">⚠ 有 ${d.unjudged} 条模型没能判定</div>` : ''}
+        ${d.engine === 'model' && d.modelStats ? (d.mode === 'two'
+          ? `<div>自一致率 <b>${((d.modelStats.selfAgreement ?? 0) * 100).toFixed(1)}%</b>｜请求 <b>${d.modelStats.requests ?? 0}</b> 次｜证据被闸门剔除 <b>${(d.modelStats.quotedOut ?? 0) + (d.modelStats.notFound ?? 0)}</b> 条｜争议 <b>${d.disputed?.length ?? 0}</b> 条</div>`
+          : d.mode === 'decision'
+            ? `<div>请求 <b>${d.modelStats.requests ?? 0}</b> 次｜是非题 <b>${d.modelStats.questions ?? 0}</b> 个${d.modelStats.singleQuestionFallback ? '（一问多题形状不被支持，已退化成单问）' : ''}｜未判定 <b>${d.modelStats.unjudged ?? 0}</b> 条</div>`
+            : `<div>请求 <b>${d.modelStats.requests ?? 0}</b> 次｜证据过闸门 <b>${d.modelStats.evidenceKept ?? 0}</b> 条｜被丢弃 <b>${(d.modelStats.notFound ?? 0) + (d.modelStats.quotedOut ?? 0)}</b> 条（抄不回原文 / 疑似引述）</div>`) : ''}
+      </div>
+      ${(d.warnings || []).map((w) => `<div class="disc">⚠ ${escapeHtml(w)}</div>`).join('')}
+      <div class="bars">${bars}</div>
+      <div class="row" style="margin-top:16px">
+        <button id="csv" class="ghost">导出 CSV</button>
+        <span style="color:var(--dim);font-size:12.5px;align-self:center">低置信候选 ${d.lowConfidenceCount} 个（被闸门压掉，不计入命中）｜CSV 导出的是全部 ${d.hits.length} 条，不受下方筛选影响</span>
+      </div>
+      <div class="disc">⚠ ${escapeHtml(d.disclaimer)}</div>
+      ${modeHint ? `<div class="disc" style="color:var(--dim)">${modeHint}</div>` : ''}
+    </div>
+
+    <div class="card" id="filters">
+      <div class="row" style="align-items:center;gap:8px">
+        <span style="font-size:12.5px;color:var(--dim)">按类型筛选（可多选）：</span>
+        <span id="chips" style="display:flex;gap:6px;flex-wrap:wrap">${chips}</span>
+        <span style="flex:1 1 20px"></span>
+        <label style="font-size:12.5px;color:var(--dim)">排序
+          <select id="hitSort" style="margin-left:6px">
+            <option value="like_desc">点赞 高→低</option>
+            <option value="like_asc">点赞 低→高</option>
+            <option value="time_desc">时间 新→旧</option>
+            <option value="time_asc">时间 旧→新</option>
+          </select>
+        </label>
+        <b id="hitCountLine" style="font-size:12.5px"></b>
+      </div>
+    </div>
+    <div id="hits"></div>`;
+
+  $('hitSort').value = view.sort;
+  $('chips').querySelectorAll('.chip').forEach((el) => {
+    el.onclick = () => {
+      const id = el.dataset.type;
+      if (!id) view.types.clear();
+      else if (view.types.has(id)) view.types.delete(id);
+      else view.types.add(id);
+      $('chips').querySelectorAll('.chip').forEach((x) => {
+        const xid = x.dataset.type;
+        x.classList.toggle('on', xid ? view.types.has(xid) : view.types.size === 0);
+      });
+      renderHits();
+    };
+  });
+  $('hitSort').onchange = () => { view.sort = $('hitSort').value; renderHits(); };
+
+  $('csv').onclick = () => exportCsv(d);
+  renderHits();
+}
+
+function csvCell(v) {
+  let s = String(v ?? '');
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+function exportCsv(d) {
+  const rows = [['rpid','user','like','ctime','time','msg','evidence_quote','families','ref_types','jump_url']];
+  for (const h of d.hits) {
+    rows.push([
+      h.rpid, h.user, h.like, h.ctime,
+      h.ctime ? new Date(h.ctime * 1000).toISOString().slice(0, 19).replace('T', ' ') : '',
+      h.msg,
+      (h.spans ?? []).map((s) => s.quote).join(' | '),
+      (h.families ?? []).map((f) => `${f.name}:${f.score.toFixed(2)}`).join(';'),
+      h.maxScore,
+      h.types.map((t) => `${t.id}:` + t.evidence.map((e) => e.span ? `${e.src}@${e.span[0]}-${e.span[1]}` : e.src).join('|')).join(';'),
+      h.jumpUrl,
+    ]);
+  }
+  const csv = '# ' + d.disclaimer + '\n' + rows.map((r) => r.map(csvCell).join(',')).join('\n') + '\n';
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `huashu-${d.target.bvid || 'comments'}${d.engine === 'model' ? '-model' : ''}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function buildBody() {
+  const types = [...document.querySelectorAll('#typeBox input:checked')].map((i) => i.value);
+  const body = {
+    input: $('input').value,
+    engine,
+    types,
+    minScore: Number($('minScore').value) || 0.6,
+    maxComments: Number($('maxComments').value) || 2000,
+    delay: Number($('delay').value) || 120,
+    cookie: $('cookie').value,
+    allowPartial: $('allowPartial').checked,
+  };
+  if (engine === 'local') {
+    body.local = { url: 'http://127.0.0.1:8790', threshold: Number($('localTh').value) || 0.6 };
+    body.minScore = body.local.threshold;
+  }
+  if (engine === 'model') {
+    const modelMode = currentModelMode();
+    body.modelMode = modelMode;   // 'llm' | 'decision'，后端据此走两条完全不同的路径
+    if (modelMode === 'decision') {
+      // 留空 → 后端自己用官方默认值（https://api.typesafe.ai + /v1/systemone）
+      const url = $('decUrl').value.trim().replace(/\/$/, '');
+      const th = Number($('decTh').value) || 0.6;
+      body.minScore = th;
+      body.decision = {
+        url,
+        model: $('decModel').value.trim(),
+        apiKey: $('decKey').value,
+        path: $('decPath').value.trim() || '/v1/systemone',
+        probabilityPath: $('decProbPath').value.trim(),
+        batchSize: Number($('decBatch').value) || 8,
+        threshold: th,
+      };
+      // 与本地微调模型对齐：本地只训了 8 类（没有 T8）
+      if ($('decOnly8').checked) body.decision.types = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T9'];
+      body.ai = { timeoutMs: 120000 };
+    } else {
+      const kind = $('aiKind').value;
+      const baseUrl = $('aiBase').value.trim().replace(/\/$/, '');
+      const model = $('aiModel').value.trim();
+      if (!baseUrl) { showError('LLM 模式需要填接口地址（baseUrl）'); return null; }
+      if (!model) { showError('LLM 模式需要填模型名（例如 deepseek-chat）'); return null; }
+      body.ai = {
+        spec: `${kind === 'ollama' ? 'ollama' : 'openai'}:${baseUrl}#${model}`,
+        apiKey: $('aiKey').value,
+        batchSize: Number($('aiBatch').value) || 20,
+        passes: Number($('aiPasses').value) || 2,
+        style: $('aiStyle').value || 'direct',   // direct=新直接判定；two=旧的两级判定
+      };
+    }
+  }
+  return body;
+}
+$('run').onclick = () => { clearError(); const b = buildBody(); if (b) runAnalyze(b); };
+$('demo').onclick = () => {
+  clearError();
+  const b = buildBody();
+  if (!b) return;
+  b.demo = true;
+  delete b.input;
+  runAnalyze(b);
+};
+$('input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('run').click(); });
+</script>
+</body>
+</html>
