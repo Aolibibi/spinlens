@@ -56,3 +56,6 @@ _*.json
 
 # 本机 Python 路径（各人环境不同，不进发布包）
 python-path.txt
+
+# 从 Release 下载的模型权重解压到这里（390MB，绝不能进仓库）
+model/

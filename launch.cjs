@@ -28,7 +28,18 @@ const http = require('node:http');
 
 const ROOT = __dirname;
 const PY_OVERRIDE = process.env.HUASHU_PY || '';   // 显式指定优先；没设就自动探测（见 findPython）
-const MODEL = process.env.HUASHU_MODEL || path.join(ROOT, 'lab', 'train', 'runs', 'all20', 'best');
+// 权重目录：优先项目内的 model/（从 Release 下载解压到这里就能用），
+// 其次才是本机训练产物 lab/train/runs/all20/best —— lab/ 不随仓库发布，别人不会有。
+const MODEL = process.env.HUASHU_MODEL
+  || [path.join(ROOT, 'model'), path.join(ROOT, 'lab', 'train', 'runs', 'all20', 'best')]
+       .find((p) => fs.existsSync(p))
+  || path.join(ROOT, 'model');
+// 本地模型服务脚本：发布位置在 model-server/serve.py；lab/ 里那份是本机开发原件，
+// 只为兼容旧目录结构保留为备选（lab/ 已被 .gitignore 排除，clone 的人不会有）。
+const SERVE_PY = [
+  path.join(ROOT, 'model-server', 'serve.py'),
+  path.join(ROOT, 'lab', 'train', 'serve-erlangshen.py'),
+].find((p) => fs.existsSync(p)) || path.join(ROOT, 'model-server', 'serve.py');
 const PY_PORT = Number(process.env.HUASHU_PY_PORT || 8790);
 const WEB_PORT = Number(process.env.HUASHU_WEB_PORT || 8787);
 const CHUNK = String(process.env.HUASHU_CHUNK || '64');
@@ -206,7 +217,7 @@ async function main() {
       step(`启动本地模型服务（端口 ${PY_PORT}）… 加载权重约 5–20 秒，请稍候`);
       const py = spawn(pyInfo.cmd, [
         ...pyInfo.args,
-        path.join(ROOT, 'lab', 'train', 'serve-erlangshen.py'),
+        SERVE_PY,
         '--port', String(PY_PORT), '--model', MODEL, '--chunk', CHUNK,
       ], {
         cwd: ROOT,
