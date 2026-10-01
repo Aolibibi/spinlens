@@ -45,11 +45,43 @@
 
 ## 30 秒上手
 
+> ### ⚠️ 先说清楚：**这个仓库默认不含模型权重**
+>
+> 权重约 **390 MB**（GitHub 单文件硬上限 100 MiB，塞不进 git），单独挂在 Release 上。
+> 想用「🎯 本地微调模型」那个引擎，**必须先跑一步安装**（下面第 2 步）。
+> **懒得下也行**：另外两个引擎（🤖 LLM 模式 / 📐 决策模型模式）**完全不需要权重**，
+> clone 下来就能用。
+
 前置：**Node.js ≥ 20.19**（内置 `fetch` 需要）。**零 npm 依赖，不用 `npm install`。**
+
+### 一键安装（推荐）
+
+**Windows**（PowerShell 里粘这一行，会在当前目录建 `spinlens` 文件夹）：
+
+```powershell
+git clone https://github.com/Aolibibi/spinlens.git; cd spinlens; powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+**macOS / Linux**：
+
+```bash
+git clone https://github.com/Aolibibi/spinlens.git && cd spinlens && ./install.sh
+```
+
+这两个脚本做两件事，都在仓库里可以直接打开看：
+
+1. **把权重下到 `./model/`**（启动器会自动认这个目录，不用配任何环境变量）
+2. **找一台装了 `torch` + `transformers` 的 Python**，把路径写进 `./python-path.txt`
+
+> 找不到合适的 Python 也不报错退出——它会告诉你怎么补，并明确告知
+> 「本地模型引擎用不了，但另外两个引擎照常」。下载失败同样不阻塞。
+
+### 手动装（不想跑脚本）
 
 ```bash
 git clone https://github.com/Aolibibi/spinlens.git
 cd spinlens
+mkdir model          # 去下面「⭐ 下载模型」一节，把 8 个文件下到 ./model/
 node server.js
 ```
 
@@ -57,7 +89,17 @@ node server.js
 
 服务只监听 `127.0.0.1`，别人访问不到，**不上传任何数据**。
 
-Windows 用户也可以双击 `启动.cmd`：开一个黑窗口、自动拉起本机服务并打开浏览器，**关窗即停服务、释放显存**（本地模型引擎占的那点显存会跟着进程一起没了）。
+### 启动
+
+**Windows**：双击 **`启动.cmd`** —— 开一个黑窗口、自动拉起模型与网页服务并打开浏览器，
+**关窗即停服务、释放显存**。
+
+**macOS / Linux**：自带的 `启动.cmd` 是 Windows 专用（批处理），请开两个终端：
+
+```bash
+python3 model-server/serve.py --port 8790 --model model   # 终端 A：模型服务（没权重就跳过）
+node server.js                                            # 终端 B：网页服务
+```
 
 想要命令行版（纯规则、零模型）：
 
@@ -87,17 +129,25 @@ node huashu.js --demo        # 不联网，用内置 12 条示例语料体验一
 
 **命令行 / 规则引擎仍然在**：`node huashu.js <BV号>` 走的是零依赖的规则匹配（正则 + 词表），秒出、完全可复现，也是「零 npm 依赖」这句话的来源。它召回低（见下面「诚实的准确率」），但适合先跑一遍看看格式。
 
-**local 引擎怎么指 Python**（没装 Python 也完全不影响另外两种引擎）：
+**本地模型引擎怎么找 Python**（找不到也完全不影响另外两种引擎）：
+
+启动器按这个顺序试，**第一个能 `import torch, transformers` 的胜出**：
+
+1. `python-path.txt`（项目根目录，一行路径；`install.ps1` / `install.sh` 会自动写）
+2. `HUASHU_PY` 环境变量
+3. 项目内 / 项目同级的 `python_embeded/`
+4. `.venv/`
+5. PATH 上的 `python` / `python3` / `py -3`
+
+> **为什么用文件而不是让用户设环境变量**：Windows 上 `setx` 只写注册表，
+> 而**已经在跑的 `explorer.exe` 不会刷新环境变量**——从资源管理器双击 `启动.cmd` 时
+> 子进程继承的是旧环境，`HUASHU_PY` 根本读不到。文件没这个问题，双击就生效。
+
+**权重目录**：默认就找项目里的 `./model/`。要换位置用 `HUASHU_MODEL` 指到那个目录即可。
 
 ```bash
-# 方式一：环境变量指到你的 python
-set HUASHU_PY=<你的 python.exe 完整路径>          # Windows cmd
-export HUASHU_PY=/usr/bin/python3                 # macOS / Linux
-
-# 方式二：把 python_embeded/ 放在项目同级目录，启动器会自动探测
+python3 -m pip install torch transformers    # 缺依赖就装这个
 ```
-
-权重目录用 `HUASHU_MODEL` 指定，默认找 `lab/train/runs/all20/best`。
 
 ---
 
@@ -115,16 +165,36 @@ export HUASHU_PY=/usr/bin/python3                 # macOS / Linux
 
 ---
 
-## ⭐ 下载模型
+## ⭐ 下载模型（仓库里没有，要单独下）
 
-模型权重：**spinlens 中文话术识别 v1.0**（Erlangshen-Roberta-110M 微调，8 类多标签，约 390MB，fp32）。两条路，按需选：
+**spinlens 中文话术识别 v1.0**：Erlangshen-Roberta-110M 微调，8 类多标签，约 390 MB（fp32）。
+
+**下到哪**：项目根目录的 **`./model/`** —— **启动器会自动认它，不用配任何环境变量**。
+
+```bash
+mkdir -p model && cd model
+BASE=https://github.com/Aolibibi/spinlens/releases/download/0.0.1-bigfisho7
+for f in config.json tokenizer.json tokenizer_config.json model.safetensors \
+         README.md LABELS.md apply_info.json LICENSE; do
+  curl -fLO "$BASE/$f"
+done
+```
+
+Windows 一行版（PowerShell）：
+
+```powershell
+mkdir model -Force | Out-Null; $b='https://github.com/Aolibibi/spinlens/releases/download/0.0.1-bigfisho7'; foreach($f in 'config.json','tokenizer.json','tokenizer_config.json','model.safetensors','README.md','LABELS.md','apply_info.json','LICENSE'){ curl.exe -fL -o "model/$f" "$b/$f" }
+```
 
 | 路 | 适合谁 | 地址 |
 |---|---|---|
-| **Hugging Face**（推荐） | 想一行 `from_pretrained()` 加载 / 看 model card | `（暂未发布到 Hugging Face，本期只走 GitHub Releases）` |
-| **GitHub Releases** | 不想注册 HF 账号 | `https://github.com/Aolibibi/spinlens/releases/tag/0.0.1-bigfisho7` |
+| **GitHub Releases** | 所有人（推荐，无需注册） | <https://github.com/Aolibibi/spinlens/releases/tag/0.0.1-bigfisho7> |
+| **Hugging Face** | 想一行 `from_pretrained()` 加载 | *（本期暂未发布，只走 GitHub Releases）* |
 
-拿到权重后用 `HUASHU_MODEL` 指到那个目录即可（见上面「三种引擎怎么选」）。
+> 只想要最小可用集？下这 4 个就够推理：`config.json`、`tokenizer.json`、
+> `tokenizer_config.json`、`model.safetensors`。其余是 model card / 类别说明 / 许可。
+
+**完整的上传 / 下载说明（命令、踩坑、许可、免责）见 [docs/PUBLISH-MODEL.md](docs/PUBLISH-MODEL.md)。**
 **完整的上传 / 下载说明（命令、踩坑、许可、免责）见 [docs/PUBLISH-MODEL.md](docs/PUBLISH-MODEL.md)。**
 
 > ⚠️ **下载前请先读这句**：这个模型**精确率 P=29.4% / 召回 R=55.6%**，验收集**只有 8 条正例**，
