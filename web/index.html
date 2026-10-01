@@ -78,8 +78,8 @@
   <div class="card">
     <div class="engines">
       <div class="engine on" id="engLocal" data-engine="local">
-        <div class="t">🎯 本地微调模型 <span class="pill rec">推荐</span></div>
-        <div class="d">我们自己微调的 Erlangshen-110M（8 类多标签、约 44ms/条、完全离线）。<b>教科书样本 8/8 全中、区分度 70–500 倍</b>；但真实评论上人工验收只有 <b>P=29.4% R=55.6%</b>（验收集仅 8 条正例，噪声大）——<b>当粗筛用，必须人工复核</b>。<br>⚠ 需先启动本地模型服务：<code>lab/train/serve-erlangshen.py</code>（127.0.0.1:8790）
+        <div class="t">本地微调模型 <span class="pill rec">推荐</span></div>
+        <div class="d">我们自己微调的 Erlangshen-110M（8 类多标签、约 40ms/条、完全离线）。<b>教科书样本 8/8 全中、区分度 70–500 倍</b>；真实评论上的准确率<b>没做过严格人工统计</b>，作者体感约 <b>70%</b>——<b>当粗筛用，必须人工复核</b>。<br>⚠ 需先启动本地模型服务：<code>model-server/serve.py</code>（127.0.0.1:8790）
           <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
             <span style="font-size:12.5px">判定阈值</span>
             <input id="localTh" type="range" min="0.30" max="0.95" step="0.05" value="0.60" style="flex:1">
@@ -88,7 +88,7 @@
         </div>
       </div>
       <div class="engine" id="engModel" data-engine="model">
-        <div class="t">🤖 外部模型引擎</div>
+        <div class="t">外部模型引擎</div>
         <div class="d">
           支持两种接法，<b>两者的显示方式完全不同</b>：
           <div style="margin:8px 0;display:flex;gap:16px;flex-wrap:wrap">
@@ -245,12 +245,12 @@
         · Node.js ≥ 20.19（实测 v24）；<b>零 npm 依赖</b>，只用 Node 标准库。<br>
         · 启动：双击根目录 <code>启动.cmd</code>（开一个黑窗口，自动拉起本机服务并打开浏览器）；或手动 <code>node server.js --port 8787</code>。<br>
         · 浏览器打开 <code>http://127.0.0.1:8787</code>；服务只监听本机 127.0.0.1。<br>
-        <b>2）local 引擎（本地微调模型）· 可选</b><br>
+        <b>2）本地微调模型 · 可选</b><br>
         · Python 环境：需要 <b>Python 3.10+</b>，且装了 <code>torch</code> + <code>transformers</code>。<br>
-        · 路径怎么给：设环境变量 <code>HUASHU_PY</code> 指向你的 python 可执行文件；或把 <code>python_embeded/</code> 放在项目同级目录，启动器会自动探测。<b>没装 Python 不影响另外两种引擎。</b><br>
-        · 模型权重：默认找 <code>lab/train/runs/all20/best</code>（Erlangshen-110M，8 类多标签）。<b>权重不随本仓库发布</b>，需自己训练或把 <code>HUASHU_MODEL</code> 指到你自己的权重目录。<br>
-        · 推理服务：<code>python lab\train\serve-erlangshen.py --port 8790 --model lab\train\runs\all20\best --chunk 64</code>。<br>
-        · 显存：约 <b>1GB</b>（实测稳态 <b>658MiB</b>）；必须设 <code>PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True</code>（不设会因显存碎片从 40ms 退化到 87 秒）。<br>
+        · 路径怎么给：把 python.exe 的完整路径写进项目根目录的 <code>python-path.txt</code>（跑安装脚本会自动写）。<b>没装 Python 不影响另外两种引擎。</b><br>
+        · 模型权重：默认找项目根目录的 <code>model/</code>（Erlangshen-110M，8 类多标签）。<b>权重不随本仓库发布</b>，去 Release 下载后放进 <code>model/</code> 即可。<br>
+        · 推理服务：<code>python model-server\serve.py --port 8790 --model model --chunk 64</code>。<br>
+        · 显存：约 <b>1GB</b>（实测稳态 <b>658MiB</b>）。<br>
         <b>3）LLM 模式（外部大模型）</b><br>
         · 需要任意 <b>OpenAI 兼容</b>接口：baseUrl + apiKey + 模型名（例如 <code>deepseek-chat</code>），走 <code>POST {baseUrl}/chat/completions</code>。<br>
         · 不占本地显存；评论会发到你自己填的那个接口，注意隐私与 token 费用。<br>

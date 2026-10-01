@@ -551,7 +551,7 @@ async function analyze(body, job) {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ texts }),
     });
-    if (!res.ok) throw new Error(`本地模型服务返回 HTTP ${res.status}（先跑 lab/train/serve-erlangshen.py）`);
+    if (!res.ok) throw new Error(`本地模型服务返回 HTTP ${res.status}（先跑 model-server/serve.py）`);
     const j = await res.json();
     const T = j.types;
     const hits = [];
@@ -648,7 +648,7 @@ async function analyze(body, job) {
     meta: payload.meta,
     rules: ruleSet.names,
     engineLabel: engine === 'local'
-      ? `本地微调模型（Erlangshen-110M·8类）｜阈值 ${result.threshold}｜命中 ${result.hits.length} 条｜人工验收 P=29.4% R=55.6%（验收集仅 8 条正例，噪声大）`
+      ? `本地微调模型（Erlangshen-110M·8类）｜阈值 ${result.threshold}｜命中 ${result.hits.length} 条｜作者体感约 70%（未做严格人工统计）`
       : engine === 'model'
         ? (result.mode === 'decision'
           ? `决策模型·typed 判定（state + 8 道 noul 是非题 → answers.<id>.noul）｜阈值 ${result.threshold}｜请求 ${result.stats?.requests ?? 0} 次（≈评论数）｜未判定 ${result.stats?.unjudged ?? 0} 条｜⚠ 官方称中文准确率不背书、不同决策模型的阈值也不同，需自行微调`
@@ -666,7 +666,7 @@ async function analyze(body, job) {
     disputed: result.disputed ?? [],
     modelStats: result.stats ?? null,
     disclaimer: engine === 'local'
-      ? '本结果由【本地微调模型】判定（Erlangshen-110M，8 类多标签，弱标签训练）。它在教科书样本上区分度很高，但在真实评论上人工验收仅 P=29.4% / R=55.6%，且验收集只有 8 条正例——**数字不确定，请当粗筛用，必须人工复核**。'
+      ? '本结果由【本地微调模型】判定（Erlangshen-110M，8 类多标签，弱标签训练）。它在教科书样本上区分度很高，但真实评论上的准确率没有做过严格人工统计，作者体感约 70%——**请当粗筛用，必须人工复核**。'
       : engine === 'model'
         ? (result.mode === 'decision'
           ? '本结果由【决策模型（Jev / TypeSafe System One）】判定：一次请求带一个 state + 多道 noul 是非题，读的是 answers.<类型id>.noul（P(true) 校准概率）。⚠ 官方明确说中文（CJK）准确率不背书、不同模型的口径/阈值/准确度也都不一样，同一套阈值换个模型就会失效——请自己微调阈值，且必须人工复核。'

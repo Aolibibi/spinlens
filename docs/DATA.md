@@ -12,7 +12,7 @@
 
 ## 那别人 clone 下来能跑什么？
 
-能跑。**网页界面本身完全不需要任何数据**：
+能跑。**网页界面和命令行工具本身完全不需要任何数据**：
 
 ```bash
 node server.js            # → http://127.0.0.1:8787
@@ -24,7 +24,7 @@ node server.js            # → http://127.0.0.1:8787
 
 ```bash
 node huashu.js --demo           # 用内置 12 条示例短句
-node huashu.js --selftest       # 24 条规则原型夹具
+node huashu.js --selftest       # 24 条内置夹具
 node tests/eval.js              # 20 条虚构样本的混淆矩阵
 ```
 
@@ -62,11 +62,11 @@ rpid,types
 123456791,T3
 ```
 
-类型编号见 `rules/event-deepseek.json`（T1–T9）。
+类型编号见 `rules/event-deepseek.json`（T1–T7 + T9；T8 已砍）。
 
 ### 3. 接进回归工具
 
-`tools/regress.cjs` 是改规则时的第一道闸门，它默认去 `lab/` 找数据，
+`tools/regress.cjs` 是改判定逻辑时的第一道闸门，它默认去 `lab/` 找数据，
 你可以用环境变量指到自己的数据：
 
 ```bash
@@ -90,9 +90,9 @@ node tools/regress.cjs
 
 ## 想训练自己的模型？
 
-`local` 引擎需要一个 **Erlangshen-110M 多标签分类器**（8 类：T1–T7 + T9）的权重，
-权重约 400MB，不随仓库发布。推理服务脚本 `lab/train/serve-erlangshen.py` 与训练脚本
-在开发者的 `lab/` 里（同样未发布）。
+本地微调模型需要一个 **Erlangshen-110M 多标签分类器**（8 类：T1–T7 + T9）的权重，
+权重约 400MB，**不随仓库发布，去 GitHub Release 下载后放进项目根目录的 `model/`**。
+推理服务脚本 `model-server/serve.py` 在仓库里；训练脚本在开发者的 `lab/` 里（未发布）。
 
 你可以：
 - 自己准备语料 + 标注，照着 `apply_info.json` 里的超参训练一份；
@@ -107,7 +107,7 @@ node tools/regress.cjs
 
 带来的直接后果：
 
-1. 任何在此之上的模型指标（包括 README 里那些 P/R 数字）**都只能当量级参考**；
+1. 任何在此之上的模型指标（包括 README 里那个体感数字）**都只能当量级参考**；
 2. **本项目无法宣称任何"绝对准确率"**；
 3. 你自己标的数据也会有同样的问题——**这很正常**，它反映的是"话术"这个概念本身的边界模糊。
 

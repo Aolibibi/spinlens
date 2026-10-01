@@ -170,7 +170,7 @@ mkdir model -Force | Out-Null; $b='https://github.com/Aolibibi/spinlens/releases
 
 只想要最小可用集？下这 4 个就够推理了：`config.json`、`tokenizer.json`、`tokenizer_config.json`、`model.safetensors`。其余是 model card、类别说明和许可。
 
-完整的上传 / 下载说明（命令、踩坑、许可、免责）见 **[docs/PUBLISH-MODEL.md](docs/PUBLISH-MODEL.md)**。
+权重发布在哪、8 个文件分别是什么、万一要重发怎么办，见 **[docs/PUBLISH-MODEL.md](docs/PUBLISH-MODEL.md)**。
 
 > ⚠️ **下载前请先读这句**：这个模型**没有做过严格的人工统计**，作者体感准确率约 **70%**（见上面「准确率」一节）。
 > **它只能当粗召回源，必须人工复核。** 正确用法是帮你把两万条评论缩到两百条，**不是替你下结论，更不是拿来指责任何人**。
