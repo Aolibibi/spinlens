@@ -537,8 +537,13 @@ async function analyze(body, job) {
   let result;
   const typeName = (t) => (ruleSet.types.find((x) => x.id === t) || {}).name || t;
   if (engine === 'local') {
-    // 本地微调模型（Erlangshen-110M，8 类）：调 lab/train/serve-erlangshen.py
-    const base = (body.local && body.local.url) || 'http://127.0.0.1:8790';
+    // 本地微调模型（Erlangshen-110M，8 类）：调 model-server/serve.py
+    // 地址优先级：请求体指定 > 启动器传入的 HUASHU_MODEL_URL > 默认 8790。
+    // 启动器若用 HUASHU_PY_PORT 挪了模型端口，会同步把这个变量传给网页服务，
+    // 否则两边对不上（表现为「分析失败：fetch failed」）。
+    const base = (body.local && body.local.url)
+      || process.env.HUASHU_MODEL_URL
+      || 'http://127.0.0.1:8790';
     const th = Number(body.minScore) || Number(body.local && body.local.threshold) || 0.5;
     setProgress(job, '本地模型判定', 0, total, `8 类多标签，阈值 ${th}`);
     const texts = payload.comments.map((c) => String(c.msg));

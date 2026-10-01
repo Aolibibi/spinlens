@@ -242,7 +242,11 @@ async function main() {
   } else {
     step(`启动网页服务（端口 ${WEB_PORT}）…`);
     const web = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(WEB_PORT)], {
-      cwd: ROOT, env: process.env, stdio: 'inherit',
+      cwd: ROOT,
+      // 把模型地址显式告诉网页服务：否则 HUASHU_PY_PORT 挪了端口后，
+      // 网页那边仍去连默认的 8790，表现为「分析失败：fetch failed」。
+      env: { ...process.env, HUASHU_MODEL_URL: `http://127.0.0.1:${PY_PORT}` },
+      stdio: 'inherit',
     });
     webOwned = true;
     kids.push({ pid: web.pid, label: '网页服务(node)' });
