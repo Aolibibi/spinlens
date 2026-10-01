@@ -173,7 +173,7 @@ gh release create 0.0.1-bigfisho7 \
   dist/model-spinlens-v1.0/README.md \
   dist/model-spinlens-v1.0/LABELS.md \
   --title "spinlens v1.0 话术识别模型权重" \
-  --notes "Erlangshen-Roberta-110M 微调，8 类多标签话术分类。精确率 P=29.4% / 召回 R=55.6%，验收集仅 8 条正例，**只当粗召回源，必须人工复核**。用法与限制见 README.md。"
+  --notes "Erlangshen-Roberta-110M 微调，8 类多标签话术分类。未做严格人工统计，作者体感准确率约 70%，**只当粗召回源，必须人工复核**。用法与限制见 README.md。"
 ```
 
 > 单条命令挂 7 个附件。Release 的附件**不计入仓库体积**，也不会被 git 历史记录，
