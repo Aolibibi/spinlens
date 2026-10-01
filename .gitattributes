@@ -1,0 +1,27 @@
+# 行尾必须按文件类型钉死，否则会跨平台崩：
+#   · Windows 批处理被存成 LF  → cmd.exe 解析错乱、窗口一闪而过
+#   · Shell 脚本被存成 CRLF    → Linux/macOS 报 bad interpreter: ...bash^M
+# 这两类问题都在本项目真实发生过，别再让它发生。
+
+# 默认：仓库里统一 LF
+* text=auto eol=lf
+
+# Windows 专用：必须 CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Unix 专用：必须 LF
+*.sh  text eol=lf
+
+# 二进制：不要做任何行尾转换
+*.safetensors binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.gz binary
